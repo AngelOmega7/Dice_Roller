@@ -3,6 +3,7 @@ import sqlite3
 from uuid import uuid4
 from dice import roll_die
 from notes import load_notes, save_note, delete_note
+from calculator import calculate
 
 def main(page: ft.Page):
     page.bgcolor = ft.Colors.BLUE_GREY_900
@@ -190,10 +191,51 @@ def main(page: ft.Page):
         visible=False,
     )
 
+    expression_field = ft.TextField(
+        label="Calculation", hint_text="12+6/3", color="#F1F5F9", bgcolor="#1E293B",
+        focused_border_color="#5EEAD4",
+    )
+    calculation_result = ft.Text(
+        "Enter a calculation and press Calculate or Enter.", size=24,
+        weight=ft.FontWeight.BOLD, color="#F1F5F9",
+    )
+
+    def run_calculation(e=None):
+        try:
+            result = calculate(expression_field.value or "")
+        except ValueError as error:
+            calculation_result.value = str(error)
+        else:
+            calculation_result.value = f"Result: {result}"
+        page.update()
+
+    expression_field.on_submit = run_calculation
+
+    calculator_page = ft.Container(
+        content=ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=20,
+            scroll=ft.ScrollMode.AUTO,
+            controls=[
+                ft.Text("Calculator", size=30, weight=ft.FontWeight.BOLD, color="#F1F5F9"),
+                expression_field,
+                ft.Button("Calculate", style=button_style, on_click=run_calculation),
+                calculation_result,
+                ft.Text("Only use 0-9 and +-/*. Multiplication and division come first. "
+                        "Final results truncate toward zero (5/2 → 2, -5/2 → -2).",
+                        color="#CBD5E1", size=12),
+            ],
+        ),
+        width=600,
+        padding=20,
+        visible=False,
+    )
+
     def show_page(name: str):
         roller_page.visible = name == "dice"
         notes_page.visible = name == "notes"
-        page.title = "Notes" if name == "notes" else "Dice Roller"
+        calculator_page.visible = name == "calculator"
+        page.title = {"dice": "Dice Roller", "notes": "Notes", "calculator": "Calculator"}[name]
         page.update()
 
     page.add(
@@ -203,18 +245,21 @@ def main(page: ft.Page):
             controls=[
                 ft.Row(
                     alignment=ft.MainAxisAlignment.CENTER,
+                    wrap=True,
                     controls=[
                         ft.Button("Dice Roller", style=button_style,
                                   on_click=lambda e: show_page("dice")),
                         ft.Button("Notes", style=button_style,
                                   on_click=lambda e: show_page("notes")),
+                        ft.Button("Calculator", style=button_style,
+                                  on_click=lambda e: show_page("calculator")),
                     ],
                 ),
                 ft.Column(
                     expand=True,
                     alignment=ft.MainAxisAlignment.CENTER,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[roller_page, notes_page],
+                    controls=[roller_page, notes_page, calculator_page],
                 ),
             ],
         )
