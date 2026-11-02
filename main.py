@@ -200,16 +200,42 @@ def main(page: ft.Page):
         weight=ft.FontWeight.BOLD, color="#F1F5F9",
     )
 
+    last_expression = None
+    last_result = None
+
+    def expression_changed(e):
+        nonlocal last_expression
+        last_expression = None
+
     def run_calculation(e=None):
+        nonlocal last_expression, last_result
+        expression = expression_field.value or ""
+        last_expression = None
         try:
-            result = calculate(expression_field.value or "")
+            result = calculate(expression)
         except ValueError as error:
             calculation_result.value = str(error)
         else:
+            last_expression = expression
+            last_result = str(result)
             calculation_result.value = f"Result: {result}"
         page.update()
 
-    expression_field.on_submit = run_calculation
+    async def submit_calculation(e):
+        nonlocal last_expression
+        if last_expression is not None and expression_field.value == last_expression:
+            expression_field.value = last_result
+            expression_field.selection = ft.TextSelection(
+                base_offset=len(last_result), extent_offset=len(last_result),
+            )
+            last_expression = None
+            page.update()
+        else:
+            run_calculation(e)
+        await expression_field.focus()
+
+    expression_field.on_change = expression_changed
+    expression_field.on_submit = submit_calculation
 
     calculator_page = ft.Container(
         content=ft.Column(
@@ -222,7 +248,8 @@ def main(page: ft.Page):
                 ft.Button("Calculate", style=button_style, on_click=run_calculation),
                 calculation_result,
                 ft.Text("Only use 0-9 and +-/*. Multiplication and division come first. "
-                        "Final results truncate toward zero (5/2 → 2, -5/2 → -2).",
+                        "Final results truncate toward zero (5/2 → 2, -5/2 → -2). "
+                        "Press Enter again without editing to continue from the result.",
                         color="#CBD5E1", size=12),
             ],
         ),
