@@ -25,8 +25,35 @@ def main(page: ft.Page):
         },
     )
 
+    roll_total = 0
+    roll_count = 0
+    total_text = ft.Text(
+        "Total: 0 · Rolls: 0", size=24, weight=ft.FontWeight.BOLD,
+        color="#F1F5F9", visible=False,
+    )
+
+    def toggle_running_total(e):
+        nonlocal roll_total, roll_count
+        roll_total = 0
+        roll_count = 0
+        total_text.value = "Total: 0 · Rolls: 0"
+        total_text.visible = bool(keep_total.value)
+        page.update()
+
+    keep_total = ft.Checkbox(
+        label="Keep running total", value=False,
+        label_style=ft.TextStyle(color="#F1F5F9"),
+        on_change=toggle_running_total,
+    )
+
     def roll(sides: int):
-        result_text.value = f"D{sides} Result: {roll_die(sides)}"
+        nonlocal roll_total, roll_count
+        result = roll_die(sides)
+        result_text.value = f"D{sides} Result: {result}"
+        if keep_total.value:
+            roll_total += result
+            roll_count += 1
+            total_text.value = f"Total: {roll_total} · Rolls: {roll_count}"
         page.update()
 
     roller_page = ft.SafeArea(
@@ -58,7 +85,9 @@ def main(page: ft.Page):
                             ft.Button("Roll d12", style=button_style, on_click=lambda e: roll(12)),
                             ft.Button("Roll d100", style=button_style, on_click=lambda e: roll(100)),
                         ]
-                    )
+                    ),
+                    keep_total,
+                    total_text,
                 ]
             )
     )
